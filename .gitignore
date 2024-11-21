@@ -1,0 +1,10 @@
+key.py
+*.sh
+*.txt
+*.jsonl
+*.csv
+data/*.
+results/*.
+wandb/
+__pycache__/
+*.DS_Store
