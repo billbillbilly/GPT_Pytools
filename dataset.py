@@ -1,9 +1,9 @@
 import pandas as pd
 import datetime
 import os
-import json
 import argparse
 from utils.key import apikey
+from utils.utils import loadInstruction, const_jsonl
 from openai import OpenAI
 
 # split dataset into Train Set, Valid Set, and Test Set
@@ -71,35 +71,6 @@ def splitYesNo(inpput_df, answer):
     no_ = inpput_df.loc[(inpput_df[answer] == 'No') | (inpput_df[answer] == 'no')]
     yes_ = inpput_df.loc[(inpput_df[answer] == 'Yes') | (inpput_df[answer] == 'yes')]
     return yes_, no_
-
-# load instruction file
-def loadInstruction(prompt_train, prompt_test):
-    instruction_train = None
-    instruction_test = None
-    if prompt_train != '':
-        with open(prompt_train) as f:
-            instruction_train = f.read()
-    if prompt_test != '':
-        with open(prompt_test) as f:
-            instruction_test = f.read()
-    if instruction_test == None:
-        instruction_test = instruction_train
-    return instruction_train, instruction_test
-
-# function for writing jsonl file
-def const_jsonl(instruction, inpput_data, content, label, content_name, file_name):
-    data = []
-    for index in range(len(inpput_data)):
-        message = inpput_data[content][index]
-        answer = inpput_data[label][index]
-        line = {"messages": [{"role": "system", "content": instruction},
-                             {"role": "user", "content": f'{content_name}:{message}'},
-                             {"role": "assistant", "content": f'Answer:{answer}'}]}
-        data += [line]
-    with open(file_name, 'w') as f:
-        for chunk in data:
-            json.dump(chunk, f)
-            f.write('\n')
 
 #------------get arguements------------
 parser = argparse.ArgumentParser()

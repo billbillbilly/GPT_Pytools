@@ -1,84 +1,77 @@
 import pandas as pd
-import numpy as np
 import os
-import time
 import argparse
 from utils.progressbar import printProgressBar
 from utils.key import apikey
 from openai import OpenAI
 import datetime
+from utils.utils import getResponse
 
 '''
 ref - https://onlinelibrary.wiley.com/doi/full/10.1002/jrsm.1715
 '''
 
-def const_prompt(system, user):
-	PROMPT_MESSAGES = [
-        system,
-        user
-    ]
-	return PROMPT_MESSAGES
-
-def use_model(df, model, times, temperature, top_p):
+def use_model(client, df, model, times, temperature, top_p):
 	l = len(df)
 
 	res = []
-	colnames = ['content', 'answer'] + [f'response_{i}' for i in range(times)] + ['final','agree','TP','TN','FP','FN'] 
+	colnames = ['content', 'answer'] + [f'response_{i}' for i in range(times)] + ['final','TP','TN','FP','FN'] 
 
 	printProgressBar(0, l, prefix = 'Progress:', suffix = 'Complete', length = 50)
 	for index in range(len(df)):
 		row = []
-		y_count = 0
-		n_count = 0
+		# y_count = 0
+		# n_count = 0
 		final = 'no'
-		agree = 0
 		tp = 0
 		tn = 0
 		fp = 0
 		fn = 0
 
-		row_data = df.iloc[index][0]
+		# row_data = df.iloc[index][0]
+		row_data = df.iloc[index].iloc[0]
 		system = row_data[0]
 		user = row_data[1]
 		content = [user['content']]
 		answer = row_data[2]['content'].lower()
-
-		row += [content, answer]
-		for eachTime in range(times):
-			try:
-				response = client.chat.completions.create(
-					model = model,
-					messages = const_prompt(system, user),
-					temperature = temperature,
-					top_p = top_p
-				)
-				r = response.choices[0].message.content
-				if 'yes,' in r.lower() or 'yes.' in r.lower(): 
-					y_count += 1
-				else:
-					n_count += 1
-				row += [r]
-			except:
-				row += ["na"]
+		
+		# responses = []
+		# for eachTime in range(times):
+		# 	try:
+		# 		response = client.chat.completions.create(
+		# 			model = model,
+		# 			messages = const_prompt(system, user),
+		# 			temperature = temperature,
+		# 			top_p = top_p
+		# 		)
+		# 		r = response.choices[0].message.content
+		# 		if 'yes,' in r.lower() or 'yes.' in r.lower(): 
+		# 			y_count += 1
+		# 		else:
+		# 			n_count += 1
+		# 		responses += [r]
+		# 	except:
+		# 		responses += ["na"]
+		responses, y_count, n_count = getResponse(client, model, 
+											system, user, 
+											times, temperature, 
+											top_p)
 		if y_count > n_count:
 			final = 'yes'
-			if final in row[1]:
+		if final == 'yes':
+			if final in answer:
 				tp += 1
-				agree = 1
 			else:
 				fp += 1
-				agree = 0
 		else: 
-			if final in row[1]:
+			if final in answer or 'not' in answer:
 				tn += 1
-				agree = 1
 			else:
 				fn += 1
-				agree = 0
-		row += [final,agree,tp,tn,fp,fn]
+		row = [content, answer] + responses + [final,tp,tn,fp,fn]
 		res += [row]
 		printProgressBar(index+1, l, prefix = 'Progress:', suffix = 'Complete', length = 50)
-	res = np.array(res)
+	# res = np.array(res)
 	res = pd.DataFrame(res, columns=colnames)
 	return res
 
@@ -189,7 +182,7 @@ df = pd.read_json(args.testdata, lines=True)
 
 #--------------------request GPT------------------------
 
-out = use_model(df, model=args.checkpoint, times=args.times, 
+out = use_model(client, df, model=args.checkpoint, times=args.times, 
 				temperature=args.temp, top_p=args.topp)
 
 #--------------------calculate metrics------------------------
