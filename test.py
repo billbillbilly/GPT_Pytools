@@ -11,12 +11,15 @@ from utils.utils import getResponse
 ref - https://onlinelibrary.wiley.com/doi/full/10.1002/jrsm.1715
 '''
 
-def use_model(client, df, model, times, threshold, temperature, top_p):
+def use_model(client, df, model, times, threshold, temperature, top_p, test):
 	l = len(df)
-
+	colnames = None
 	res = []
-	colnames = ['content', 'answer'] + [f'response_{i}' for i in range(times)] + ['final','TP','TN','FP','FN'] 
-
+	if test:
+		colnames = ['content', 'answer'] + [f'response_{i}' for i in range(times)] + ['final','TP','TN','FP','FN'] 
+	else:
+		colnames = ['index','content', 'answer'] + [f'response_{i}' for i in range(times)] + ['final']
+	
 	printProgressBar(0, l, prefix = 'Progress:', suffix = 'Complete', length = 50)
 	for index in range(len(df)):
 		row = []
@@ -29,25 +32,30 @@ def use_model(client, df, model, times, threshold, temperature, top_p):
 		system = row_data[0]
 		user = row_data[1]
 		content = [user['content']]
-		answer = row_data[2]['content'].lower()
+		if test:
+			answer = row_data[2]['content'].lower()
 
 		responses, y_perc = getResponse(client, model, 
 								   system, user, 
 								   times, temperature, 
 								   top_p)
-		if y_perc >= threshold:
+		if y_perc > threshold:
 			final = 'yes'
-		if final == 'yes':
-			if final in answer:
-				tp += 1
-			else:
-				fp += 1
+		if test:
+			if final == 'yes':
+				if final in answer:
+					tp += 1
+				else:
+					fp += 1
+			else: 
+				if final in answer or 'not' in answer:
+					tn += 1
+				else:
+					fn += 1
+		if test:
+			row = [content, answer] + responses + [final,tp,tn,fp,fn]
 		else: 
-			if final in answer or 'not' in answer:
-				tn += 1
-			else:
-				fn += 1
-		row = [content, answer] + responses + [final,tp,tn,fp,fn]
+			row = [content] + responses + [final]
 		res += [row]
 		printProgressBar(index+1, l, prefix = 'Progress:', suffix = 'Complete', length = 50)
 	res = pd.DataFrame(res, columns=colnames)
@@ -147,6 +155,10 @@ parser.add_argument('--threshold',
                     type=float, 
                     default=0.5, 
                     help='the percentage of positive predictions to decide the final prediction')
+parser.add_argument('--goal', 
+                    type=str, 
+                    default='test', 
+                    help='for test or predict')
 
 args = parser.parse_args()
 
@@ -165,12 +177,18 @@ df = pd.read_json(args.testdata, lines=True)
 
 #--------------------request GPT------------------------
 
+test = True
+if args.goal != 'test':
+	test = False
 out = use_model(client, df, model=args.checkpoint, times=args.times, 
-				threshold=args.threshold, temperature=args.temp, top_p=args.topp)
+				threshold=args.threshold, temperature=args.temp, 
+				top_p=args.topp, test=test)
 
 #--------------------calculate metrics------------------------
 
-metrics_df = metrics(out)
+metrics_df = None
+if args.goal == 'test':
+	metrics_df = metrics(out)
 
 #--------------------write results------------------------
 
@@ -178,6 +196,7 @@ current_time = datetime.datetime.now()
 fn = f'{current_time.year}{current_time.month}{current_time.day}{current_time.hour}{current_time.minute}{current_time.second}'
 os.makedirs('../results', exist_ok=True)
 out.to_csv(f'../results/results_{fn}.csv')
-metrics_df.to_csv(f'../results/metrics_{fn}.csv')
+if metrics_df:
+	metrics_df.to_csv(f'../results/metrics_{fn}.csv')
 
 print("Done")
