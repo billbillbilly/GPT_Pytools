@@ -11,7 +11,7 @@ from utils.utils import getResponse
 ref - https://onlinelibrary.wiley.com/doi/full/10.1002/jrsm.1715
 '''
 
-def use_model(client, df, model, times, temperature, top_p):
+def use_model(client, df, model, times, threshold, temperature, top_p):
 	l = len(df)
 
 	res = []
@@ -20,43 +20,22 @@ def use_model(client, df, model, times, temperature, top_p):
 	printProgressBar(0, l, prefix = 'Progress:', suffix = 'Complete', length = 50)
 	for index in range(len(df)):
 		row = []
-		# y_count = 0
-		# n_count = 0
 		final = 'no'
 		tp = 0
 		tn = 0
 		fp = 0
 		fn = 0
-
-		# row_data = df.iloc[index][0]
 		row_data = df.iloc[index].iloc[0]
 		system = row_data[0]
 		user = row_data[1]
 		content = [user['content']]
 		answer = row_data[2]['content'].lower()
-		
-		# responses = []
-		# for eachTime in range(times):
-		# 	try:
-		# 		response = client.chat.completions.create(
-		# 			model = model,
-		# 			messages = const_prompt(system, user),
-		# 			temperature = temperature,
-		# 			top_p = top_p
-		# 		)
-		# 		r = response.choices[0].message.content
-		# 		if 'yes,' in r.lower() or 'yes.' in r.lower(): 
-		# 			y_count += 1
-		# 		else:
-		# 			n_count += 1
-		# 		responses += [r]
-		# 	except:
-		# 		responses += ["na"]
-		responses, y_count, n_count = getResponse(client, model, 
-											system, user, 
-											times, temperature, 
-											top_p)
-		if y_count > n_count:
+
+		responses, y_perc = getResponse(client, model, 
+								   system, user, 
+								   times, temperature, 
+								   top_p)
+		if y_perc >= threshold:
 			final = 'yes'
 		if final == 'yes':
 			if final in answer:
@@ -71,7 +50,6 @@ def use_model(client, df, model, times, temperature, top_p):
 		row = [content, answer] + responses + [final,tp,tn,fp,fn]
 		res += [row]
 		printProgressBar(index+1, l, prefix = 'Progress:', suffix = 'Complete', length = 50)
-	# res = np.array(res)
 	res = pd.DataFrame(res, columns=colnames)
 	return res
 
@@ -84,7 +62,8 @@ def metrics(df):
 		FP and FN are the cases where GPT model disagreed with human reviewers, 
 		meaning it made wrong decisions.
 
-		Balance is calculated by dividing true cases by false cases.
+		Balance shows the proportion of positive to negative cases and 
+		is calculated by dividing true cases by false cases.
 		
 		Sensitivity (recall) shows how well GPT identified 
 		positive cases by taking TP and dividing them by the sum of TP and FN. 
@@ -164,6 +143,10 @@ parser.add_argument('--times',
                     type=int, 
                     default=3, 
                     help='the number of times for testing dataset')
+parser.add_argument('--threshold', 
+                    type=float, 
+                    default=0.5, 
+                    help='the percentage of positive predictions to decide the final prediction')
 
 args = parser.parse_args()
 
@@ -183,7 +166,7 @@ df = pd.read_json(args.testdata, lines=True)
 #--------------------request GPT------------------------
 
 out = use_model(client, df, model=args.checkpoint, times=args.times, 
-				temperature=args.temp, top_p=args.topp)
+				threshold=args.threshold, temperature=args.temp, top_p=args.topp)
 
 #--------------------calculate metrics------------------------
 

@@ -39,7 +39,7 @@ def const_prompt(system, user):
 def getResponse(client, model, system, user, times, temperature, top_p):
     responses = []
     y_count = 0
-    n_count = 0
+
     for eachTime in range(times):
         try:
             response = client.chat.completions.create(
@@ -49,11 +49,9 @@ def getResponse(client, model, system, user, times, temperature, top_p):
                 top_p = top_p
             )
             r = response.choices[0].message.content
-            if 'yes,' in r.lower() or 'yes.' in r.lower(): 
+            if 'yes' in r.lower(): 
                 y_count += 1
-            else:
-                n_count += 1
             responses += [r]
         except:
             responses += ["na"]
-    return responses, y_count, n_count
+    return responses, y_count/times

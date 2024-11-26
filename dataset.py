@@ -7,22 +7,22 @@ from utils.utils import loadInstruction, const_jsonl
 from openai import OpenAI
 
 # split dataset into Train Set, Valid Set, and Test Set
-def splitData(df, label):
+def splitData(df, label, trainRate, validRate):
     '''
     [Train]
-    Total: 70%
+    Total: trainRate (default 70%)
     answer-yes:answer-no = 50% : 50% (random sampled)
     ---------------- 
     [Validation]
-    Total: 10%
+    Total: validRate (default 10%)
     ----------------
     [Test]
-    Total: 20%
+    Total: 100% - (trainRate + validRate) (default 20%)
     answer-yes:answer-no = 50% : 50% (random sampled)
     '''
     totalSet = len(df)
-    trainSet = int(totalSet * 0.7)
-    validSet = int(totalSet * 0.1)
+    trainSet = int(totalSet * trainRate)
+    validSet = int(totalSet * validRate)
     testSet = totalSet - (trainSet + validSet)
 
     # randomly select data from two dataframes for the Train Set
@@ -102,6 +102,14 @@ parser.add_argument('--projName',
                     type=str, 
                     default='proj', 
                     help='the name of project')
+parser.add_argument('--train', 
+                    type=float, 
+                    default=0.7, 
+                    help='the proportion of training samples')
+parser.add_argument('--valid', 
+                    type=float, 
+                    default=0.1, 
+                    help='the proportion of validation samples')
 
 args = parser.parse_args()
 
@@ -117,7 +125,7 @@ df.reset_index(drop=True, inplace=True)
 
 #------------prepare dataset for training, validation, and testing------------
 
-train_df, valid_df, test_df = splitData(df, args.labelCol)
+train_df, valid_df, test_df = splitData(df, args.labelCol, args.train, args.valid)
 
 #------------create jsonl files for training, validation, and testing-----------
 
