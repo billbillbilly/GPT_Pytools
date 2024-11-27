@@ -41,16 +41,20 @@ scripts:
 - wandbLog.py
 - test.py
 - predict.py
-- csv2jsonl.py
 - update.py
 
 ### Data preparation
 To Split a labeld dataset into training, validation, and testing datasets by retios such as 6:2:2 using `dataset.py`, a labeled dataset and instruction/prompt text file should be put in `data/`.
 
-Define a bash script:
+Define a bash script for example `prepare.sh`:
 ```sh
 #!/usr/bin/env python
 python dataset.py --dataset ${labeled_dataset.csv} --contentCol ${Comment} --labelCol ${Category} --instruction1 ${instruction.txt} --projName ${project_name} --train 0.6 --valid 0.2
+```
+
+Then do:
+```
+bash prepare.sh
 ```
 
 After excuting `dataset.py`, there will be four files in `data/`:
@@ -61,6 +65,21 @@ After excuting `dataset.py`, there will be four files in `data/`:
 
 train_${project_name}.jsonl and valid_${project_name}.jsonl will be uploaded to the storage of openai platform while test_${project_name}.jsonl is just stored locally. id_${project_name}_data.csv stores the IDs of train_${project_name}.jsonl and valid_${project_name}.jsonl
 
-
 ### Fine-tune
+When fine-tuning the gpt models, there are three adjustable parameters to consider:
+- epochs: the number of times the fine-tune processes an entire training dataset
+- learning rate multiplier: a factor for multipling the learning rate
+- batch size: the number of training examples used in a single iteration
+
+Usually, increasing batch size (e.g. 4 and 8) and using small learning rate multiplier (e.g. 0.05 and 0.001) can help avoid overfitting and improve stability. These parameters should be also customized depending on sample sizes.
+
+After running `dataset.py`, define a bash script for example `train.sh`:
+```sh
+#!/usr/bin/env python
+python train.py --dataid id_${project_name}_data.csv --lr 0.05 --epochs 4  --bs 12 --suffix ${project_name or whatever_you_like}
+```
+
+Note: Please check out ![api reference of fine-tune section](https://platform.openai.com/docs/api-reference/fine-tuning) for more details
+
+### Test
 
