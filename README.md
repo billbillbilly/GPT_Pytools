@@ -79,7 +79,7 @@ After running `dataset.py`, define a bash script for example `train.sh`:
 python train.py --dataid id_${project_name}_data.csv --lr 0.05 --epochs 4  --bs 12 --suffix ${project_name or whatever_you_like}
 ```
 
-Note: Please check out ![api reference of fine-tune section](https://platform.openai.com/docs/api-reference/fine-tuning) for more details
+Note: Please check out [api reference of fine-tune section](https://platform.openai.com/docs/api-reference/fine-tuning) for more details
 
 ### Test
 
