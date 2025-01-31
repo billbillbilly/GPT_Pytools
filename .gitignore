@@ -7,3 +7,4 @@ key.py
 wandb/
 __pycache__/
 *.DS_Store
+*.ipynb

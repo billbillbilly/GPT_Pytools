@@ -145,13 +145,16 @@ elif ".csv" in args.testdata:
 #--------------------request GPT------------------------
 
 test = True
+labelCol = None
 if args.goal != 'test':
 	test = False
+else:
+	labelCol = args.colnames[2]
 out = use_model(client, df, model=args.checkpoint, times=args.times, 
 				threshold=args.threshold, temperature=args.temp, 
 				top_p=args.topp, test=test, iscsv=iscsv, 
 				instruction=instruction, indexCol=args.colnames[0], 
-				contentCol=args.colnames[1], labelCol=args.colnames[2])
+				contentCol=args.colnames[1], labelCol=labelCol)
 
 #--------------------calculate metrics------------------------
 
