@@ -105,3 +105,8 @@ python test.py --testdata ${data}.csv --checkpoint ${checkpoint id} --times 3 --
 ```
 
 note: the output csv file will be saved in "results" folder.
+
+## Citation
+```
+Yang, Xiaohao (2025). GPT_Pytools. figshare. Software. https://doi.org/10.6084/m9.figshare.28720874.v1
+```
